@@ -15,6 +15,7 @@ st.set_page_config(
 # 2. Database Connection Helper
 # 2. Database Connection Helper
 # 2. Database Connection Helper
+# 2. Database Connection Helper
 def get_connection():
     try:
         if "mysql" in st.secrets:
@@ -34,8 +35,10 @@ def get_connection():
                 database="airline_reservation_db"
             )
         
-        # Auto-create table if not exists on cloud
+        # Auto-create ALL required tables if they don't exist
         cursor = conn.cursor()
+        
+        # 1. Flights Table
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS flights (
                 flight_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -47,6 +50,42 @@ def get_connection():
                 available_seats INT NOT NULL
             )
         """)
+        
+        # 2. Passengers Table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS passengers (
+                passenger_id INT AUTO_INCREMENT PRIMARY KEY,
+                first_name VARCHAR(50) NOT NULL,
+                last_name VARCHAR(50) NOT NULL,
+                email VARCHAR(100) UNIQUE NOT NULL,
+                passport_number VARCHAR(20) UNIQUE NOT NULL
+            )
+        """)
+        
+        # 3. Airports Table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS airports (
+                airport_id INT AUTO_INCREMENT PRIMARY KEY,
+                airport_code VARCHAR(10) UNIQUE NOT NULL,
+                airport_name VARCHAR(100) NOT NULL,
+                city VARCHAR(50) NOT NULL,
+                country VARCHAR(50) NOT NULL
+            )
+        """)
+        
+        # 4. Bookings Table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS bookings (
+                booking_id INT AUTO_INCREMENT PRIMARY KEY,
+                flight_id INT,
+                passenger_id INT,
+                booking_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+                status VARCHAR(20) DEFAULT 'Confirmed',
+                FOREIGN KEY (flight_id) REFERENCES flights(flight_id) ON DELETE CASCADE,
+                FOREIGN KEY (passenger_id) REFERENCES passengers(passenger_id) ON DELETE CASCADE
+            )
+        """)
+        
         conn.commit()
         cursor.close()
         return conn
