@@ -233,58 +233,37 @@ elif choice == "👤 Passenger Management":
 
     tab_reg, tab_view = st.tabs(["Register Passenger", "View All Passengers"])
 
-with tab_reg:
-    with st.form("passenger_form"):
-        full_name = st.text_input("Full Name (as in passport)")
-        passport = st.text_input("Passport Number")
-        email = st.text_input("Email Address")
+    with tab_reg:
+        with st.form("passenger_form"):
+            full_name = st.text_input("Full Name (as in passport)")
+            passport = st.text_input("Passport Number")
+            phone = st.text_input("Contact Phone Number")
+            submit = st.form_submit_button("Register Passenger")
 
-        submit = st.form_submit_button("Register Passenger")
-
-        if submit:
-            if full_name.strip() and passport.strip() and email.strip():
-                name_parts = full_name.strip().split(maxsplit=1)
-                first_name = name_parts[0]
-                last_name = name_parts[1] if len(name_parts) > 1 else ""
-
-                conn = get_connection()
-                if conn:
-                    try:
-                        cursor = conn.cursor()
-                        query = """
-                            INSERT INTO passengers
-                            (first_name, last_name, email, passport_number)
-                            VALUES (%s, %s, %s, %s)
-                        """
-                        cursor.execute(
-                            query,
-                            (first_name, last_name, email.strip(), passport.strip())
-                        )
-                        conn.commit()
-                        st.success(
-                            f"Passenger registered successfully! "
-                            f"Assigned Passenger ID: {cursor.lastrowid}"
-                        )
-                    except Error as e:
-                        conn.rollback()
-                        st.error(f"Failed to register: {e}")
-                    finally:
-                        conn.close()
-            else:
-                st.warning("Please complete all required fields.")
+            if submit:
+                if full_name and passport and phone:
+                    conn = get_connection()
+                    if conn:
+                        try:
+                            cursor = conn.cursor()
+                            query = "INSERT INTO passengers (full_name, passport_number, phone) VALUES (%s, %s, %s)"
+                            cursor.execute(query, (full_name, passport, phone))
+                            conn.commit()
+                            st.success(
+                                f"Passenger registered successfully! Assigned Passenger ID: **{cursor.lastrowid}**")
+                        except Error as e:
+                            st.error(f"Failed to register: {e}")
+                        finally:
+                            conn.close()
+                else:
+                    st.warning("Please complete all required fields.")
 
     with tab_view:
         conn = get_connection()
         if conn:
             cursor = conn.cursor(dictionary=True)
-            cursor.execute("""
-    SELECT
-        passenger_id AS 'Passenger ID',
-        CONCAT(first_name, ' ', last_name) AS 'Full Name',
-        email AS 'Email',
-        passport_number AS 'Passport Number'
-    FROM passengers
-""")
+            cursor.execute(
+                "SELECT passenger_id AS 'Passenger ID', full_name AS 'Full Name', passport_number AS 'Passport Number', phone AS 'Phone' FROM passengers")
             passengers = cursor.fetchall()
             conn.close()
             if passengers:
@@ -297,22 +276,13 @@ elif choice == "📋 Booking Records & Analytics":
     conn = get_connection()
     if conn:
         cursor = conn.cursor(dictionary=True)
-query = """
-    SELECT
-        b.booking_id AS 'Booking ID',
-        CONCAT(p.first_name, ' ', p.last_name) AS 'Passenger Name',
-        p.passport_number AS 'Passport',
-        f.flight_number AS 'Flight No',
-        f.price AS 'Fare ($)',
-        b.booking_date AS 'Booking Date',
-        b.status AS 'Status'
-    FROM bookings b
-    JOIN passengers p
-        ON b.passenger_id = p.passenger_id
-    JOIN flights f
-        ON b.flight_id = f.flight_id
-    ORDER BY b.booking_id DESC
-"""
+        query = """
+                SELECT b.booking_id AS 'Booking ID', p.full_name AS 'Passenger Name', p.passport_number AS 'Passport', f.flight_number AS 'Flight No', f.price AS 'Fare ($)', b.booking_date AS 'Booking Date', b.status AS 'Status'
+                FROM bookings b
+                         JOIN passengers p ON b.passenger_id = p.passenger_id
+                         JOIN flights f ON b.flight_id = f.flight_id
+                ORDER BY b.booking_id DESC \
+                """
         cursor.execute(query)
         bookings = cursor.fetchall()
         conn.close()
