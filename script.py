@@ -333,4 +333,44 @@ elif choice == "➕ Schedule New Flight":
     airports_list = [a for a in get_airports() if a != "ALL"]
 
     with st.form("add_flight_form"):
-        f_num =
+        f_num = st.text_input("Flight Code (e.g. MS900)")
+
+        c1, c2 = st.columns(2)
+        with c1:
+            dep_choice = st.selectbox("Departure Airport", airports_list)
+        with c2:
+            arr_choice = st.selectbox("Arrival Airport", airports_list)
+
+        f_time = st.text_input("Departure Time", value=datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+
+        c3, c4 = st.columns(2)
+        with c3:
+            f_price = st.number_input("Ticket Price ($)", min_value=10.0, value=350.0, step=10.0)
+        with c4:
+            f_seats = st.number_input("Aircraft Seat Capacity", min_value=1, value=150, step=5)
+
+        submit_flight = st.form_submit_button("Publish Flight Schedule")
+        if submit_flight:
+            dep_code = dep_choice.split(" - ")[0]
+            arr_code = arr_choice.split(" - ")[0]
+
+            if dep_code == arr_code:
+                st.error("Departure and Arrival airports cannot be identical!")
+            elif f_num and f_time:
+                conn = get_connection()
+                if conn:
+                    try:
+                        cursor = conn.cursor()
+                        query = """INSERT INTO flights (flight_number, departure_airport, arrival_airport, 
+                                                        departure_time, price, available_seats)
+                                   VALUES (%s, %s, %s, %s, %s, %s)"""
+                        cursor.execute(query, (f_num.upper(), dep_code, arr_code, f_time, f_price, f_seats))
+                        conn.commit()
+                        st.success(f"Flight {f_num.upper()} successfully published!")
+                        st.rerun()
+                    except Error as e:
+                        st.error(f"Failed to add flight: {e}")
+                    finally:
+                        conn.close()
+            else:
+                st.warning("Please provide a valid flight number and departure time.")
