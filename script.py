@@ -32,15 +32,15 @@ def get_connection():
             )
         return conn
     except Exception as e:
-        st.error(f"Database Connection Error: {e}")
         return None
 
-# Safe Database Table Initialization
-def init_db():
+# Database Setup Helper
+def setup_database():
     conn = get_connection()
     if conn:
         try:
             cursor = conn.cursor()
+            
             # Flights Table
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS flights (
@@ -54,6 +54,19 @@ def init_db():
                 )
             """)
             
+            # Passengers Table
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS passengers (
+                    passenger_id INT AUTO_INCREMENT PRIMARY KEY,
+                    first_name VARCHAR(50),
+                    last_name VARCHAR(50),
+                    full_name VARCHAR(100),
+                    email VARCHAR(100),
+                    passport_number VARCHAR(20) UNIQUE,
+                    phone VARCHAR(30)
+                )
+            """)
+            
             # Airports Table
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS airports (
@@ -62,16 +75,6 @@ def init_db():
                     airport_name VARCHAR(100) NOT NULL,
                     city VARCHAR(50) NOT NULL,
                     country VARCHAR(50) NOT NULL
-                )
-            """)
-            
-            # Passengers Table (Flexible Creation)
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS passengers (
-                    passenger_id INT AUTO_INCREMENT PRIMARY KEY,
-                    full_name VARCHAR(100) DEFAULT '',
-                    passport_number VARCHAR(20) DEFAULT '',
-                    phone VARCHAR(30) DEFAULT ''
                 )
             """)
             
@@ -92,7 +95,7 @@ def init_db():
         except Exception:
             pass
 
-init_db()
+setup_database()
 
 # Helper to fetch active airports for dropdowns
 def get_airports():
@@ -101,9 +104,10 @@ def get_airports():
         try:
             cursor = conn.cursor()
             cursor.execute("SELECT airport_code, city FROM airports")
-            airports = [f"{row[0]} - {row[1]}" for row in cursor.fetchall()]
+            rows = cursor.fetchall()
             conn.close()
-            return ["ALL"] + airports
+            if rows:
+                return ["ALL"] + [f"{row[0]} - {row[1]}" for row in rows]
         except Exception:
             pass
     return ["ALL"]
