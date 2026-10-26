@@ -16,20 +16,20 @@ st.set_page_config(
 def get_connection():
     try:
         if "mysql" in st.secrets:
-        db_config = st.secrets["mysql"]
-        conn = mysql.connector.connect(
-            host=db_config["host"],
-            port=int(db_config["port"]),
-            user=db_config["user"],
-            password=db_config["password"],
-            database=db_config["database"]
-        )
-    else:
-        conn = mysql.connector.connect(
-            host="localhost",
-            user="root",
-            password="",
-            database="airline_reservation_db"
+            db_config = st.secrets["mysql"]
+            conn = mysql.connector.connect(
+                host=db_config["host"],
+                port=int(db_config["port"]),
+                user=db_config["user"],
+                password=db_config["password"],
+                database=db_config["database"]
+            )
+        else:
+            conn = mysql.connector.connect(
+                host="localhost",
+                user="root",
+                password="",
+                database="airline_reservation_db"
         )
 except Exception as e:
     st.error(f"Database Connection Error: {e}")
