@@ -96,7 +96,7 @@ def get_connection():
     except Exception as e:
         st.error(f"Database Connection Error: {e}")
         return None
-        
+        st.rerun()
 
 
 # Helper to fetch active airports for dropdowns
