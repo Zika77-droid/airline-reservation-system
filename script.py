@@ -13,6 +13,7 @@ st.set_page_config(
 
 
 # 2. Database Connection Helper
+# 2. Database Connection Helper
 def get_connection():
     try:
         if "mysql" in st.secrets:
@@ -30,9 +31,12 @@ def get_connection():
                 user="root",
                 password="",
                 database="airline_reservation_db"
-        )
-except Exception as e:
-    st.error(f"Database Connection Error: {e}")
+            )
+        return conn
+    except Exception as e:
+        st.error(f"Database Connection Error: {e}")
+        return None
+        
 
 
 # Helper to fetch active airports for dropdowns
