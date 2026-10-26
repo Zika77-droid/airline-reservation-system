@@ -17,6 +17,7 @@ st.set_page_config(
 # 2. Database Connection Helper
 # 2. Database Connection Helper
 # 2. Database Connection Helper
+# 2. Database Connection Helper
 def get_connection():
     try:
         if "mysql" in st.secrets:
@@ -36,10 +37,9 @@ def get_connection():
                 database="airline_reservation_db"
             )
         
-        # Auto-create ALL required tables if they don't exist
         cursor = conn.cursor()
         
-        # 1. Flights Table
+        # Create Tables
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS flights (
                 flight_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -51,8 +51,6 @@ def get_connection():
                 available_seats INT NOT NULL
             )
         """)
-        
-        # 2. Passengers Table
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS passengers (
                 passenger_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -62,8 +60,6 @@ def get_connection():
                 passport_number VARCHAR(20) UNIQUE NOT NULL
             )
         """)
-        
-        # 3. Airports Table
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS airports (
                 airport_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -73,8 +69,6 @@ def get_connection():
                 country VARCHAR(50) NOT NULL
             )
         """)
-        
-        # 4. Bookings Table
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS bookings (
                 booking_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -87,16 +81,14 @@ def get_connection():
             )
         """)
         
-        # Insert Sample Data automatically if flights table is empty
-        cursor.execute("SELECT COUNT(*) FROM flights")
-        if cursor.fetchone()[0] == 0:
-            cursor.execute("""
-                INSERT INTO flights (flight_number, departure_airport, arrival_airport, departure_time, price, available_seats) 
-                VALUES 
-                ('MS-777', 'Cairo Intl (CAI)', 'Jeddah Intl (JED)', '2026-11-01 10:00:00', 350.00, 120),
-                ('MS-888', 'Cairo Intl (CAI)', 'Dubai Intl (DXB)', '2026-11-02 14:30:00', 420.00, 85),
-                ('MS-999', 'Cairo Intl (CAI)', 'London Heathrow (LHR)', '2026-11-05 08:15:00', 650.00, 45)
-            """)
+        # Insert initial data directly
+        cursor.execute("""
+            INSERT IGNORE INTO flights (flight_id, flight_number, departure_airport, arrival_airport, departure_time, price, available_seats) 
+            VALUES 
+            (1, 'MS-777', 'Cairo Intl (CAI)', 'Jeddah Intl (JED)', '2026-11-01 10:00:00', 350.00, 120),
+            (2, 'MS-888', 'Cairo Intl (CAI)', 'Dubai Intl (DXB)', '2026-11-02 14:30:00', 420.00, 85),
+            (3, 'MS-999', 'Cairo Intl (CAI)', 'London Heathrow (LHR)', '2026-11-05 08:15:00', 650.00, 45)
+        """)
         
         conn.commit()
         cursor.close()
