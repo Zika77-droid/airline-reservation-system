@@ -233,7 +233,7 @@ elif choice == "👤 Passenger Management":
 
     tab_reg, tab_view = st.tabs(["Register Passenger", "View All Passengers"])
 
-    with tab_reg:
+with tab_reg:
     with st.form("passenger_form"):
         full_name = st.text_input("Full Name (as in passport)")
         passport = st.text_input("Passport Number")
@@ -297,7 +297,7 @@ elif choice == "📋 Booking Records & Analytics":
     conn = get_connection()
     if conn:
         cursor = conn.cursor(dictionary=True)
-        query = """
+query = """
     SELECT
         b.booking_id AS 'Booking ID',
         CONCAT(p.first_name, ' ', p.last_name) AS 'Passenger Name',
