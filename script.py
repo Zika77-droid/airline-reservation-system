@@ -14,6 +14,7 @@ st.set_page_config(
 
 # 2. Database Connection Helper
 # 2. Database Connection Helper
+# 2. Database Connection Helper
 def get_connection():
     try:
         if "mysql" in st.secrets:
@@ -32,6 +33,22 @@ def get_connection():
                 password="",
                 database="airline_reservation_db"
             )
+        
+        # Auto-create table if not exists on cloud
+        cursor = conn.cursor()
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS flights (
+                flight_id INT AUTO_INCREMENT PRIMARY KEY,
+                flight_number VARCHAR(20) NOT NULL,
+                departure_airport VARCHAR(50) NOT NULL,
+                arrival_airport VARCHAR(50) NOT NULL,
+                departure_time DATETIME NOT NULL,
+                price DECIMAL(10,2) NOT NULL,
+                available_seats INT NOT NULL
+            )
+        """)
+        conn.commit()
+        cursor.close()
         return conn
     except Exception as e:
         st.error(f"Database Connection Error: {e}")
