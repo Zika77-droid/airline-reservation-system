@@ -34,14 +34,14 @@ def get_connection():
     except Exception as e:
         return None
 
-# Auto Initialize & Patch Database Tables Safely
+# Auto Initialize Tables with Fresh Names to prevent Schema Conflicts
 def init_db():
     conn = get_connection()
     if conn:
         try:
             cursor = conn.cursor()
             
-            # 1. Flights Table
+            # 1. Flights
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS flights (
                     flight_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -54,7 +54,17 @@ def init_db():
                 )
             """)
             
-            # 2. Airports Table
+            # 2. Passengers (v2 to avoid conflict with legacy columns)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS passengers_v2 (
+                    passenger_id INT AUTO_INCREMENT PRIMARY KEY,
+                    full_name VARCHAR(100) NOT NULL,
+                    passport_number VARCHAR(20) UNIQUE NOT NULL,
+                    phone VARCHAR(30)
+                )
+            """)
+            
+            # 3. Airports
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS airports (
                     airport_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -64,42 +74,21 @@ def init_db():
                     country VARCHAR(50) NOT NULL
                 )
             """)
-
-            # 3. Passengers Table (Original Name)
+            
+            # 4. Bookings (v2)
             cursor.execute("""
-                CREATE TABLE IF NOT EXISTS passengers (
-                    passenger_id INT AUTO_INCREMENT PRIMARY KEY,
-                    full_name VARCHAR(100),
-                    passport_number VARCHAR(20),
-                    phone VARCHAR(30)
-                )
-            """)
-
-            # Safe Patching: Add missing columns dynamically if old schema exists
-            for col_query in [
-                "ALTER TABLE passengers ADD COLUMN full_name VARCHAR(100)",
-                "ALTER TABLE passengers ADD COLUMN passport_number VARCHAR(20)",
-                "ALTER TABLE passengers ADD COLUMN phone VARCHAR(30)"
-            ]:
-                try:
-                    cursor.execute(col_query)
-                except Exception:
-                    pass
-
-            # 4. Bookings Table (Original Name)
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS bookings (
+                CREATE TABLE IF NOT EXISTS bookings_v2 (
                     booking_id INT AUTO_INCREMENT PRIMARY KEY,
                     flight_id INT,
                     passenger_id INT,
                     booking_date DATETIME DEFAULT CURRENT_TIMESTAMP,
                     status VARCHAR(20) DEFAULT 'Confirmed',
                     FOREIGN KEY (flight_id) REFERENCES flights(flight_id) ON DELETE CASCADE,
-                    FOREIGN KEY (passenger_id) REFERENCES passengers(passenger_id) ON DELETE CASCADE
+                    FOREIGN KEY (passenger_id) REFERENCES passengers_v2(passenger_id) ON DELETE CASCADE
                 )
             """)
             
-            # Seed Initial Airports
+            # Seed Airports
             cursor.execute("SELECT COUNT(*) FROM airports")
             if cursor.fetchone()[0] == 0:
                 cursor.execute("""
@@ -149,10 +138,10 @@ if conn:
         cursor.execute("SELECT SUM(available_seats) FROM flights")
         total_seats = cursor.fetchone()[0] or 0
 
-        cursor.execute("SELECT COUNT(*) FROM bookings WHERE status = 'Confirmed'")
+        cursor.execute("SELECT COUNT(*) FROM bookings_v2 WHERE status = 'Confirmed'")
         active_bookings = cursor.fetchone()[0]
 
-        cursor.execute("SELECT COUNT(*) FROM passengers")
+        cursor.execute("SELECT COUNT(*) FROM passengers_v2")
         total_passengers = cursor.fetchone()[0]
         conn.close()
 
@@ -233,7 +222,7 @@ if choice == "🔍 Flight Search & Instant Booking":
                             if res and res[0] > 0:
                                 today = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                                 cursor.execute(
-                                    "INSERT INTO bookings (passenger_id, flight_id, booking_date, status) VALUES (%s, %s, %s, 'Confirmed')",
+                                    "INSERT INTO bookings_v2 (passenger_id, flight_id, booking_date, status) VALUES (%s, %s, %s, 'Confirmed')",
                                     (passenger_id, selected_flight_id, today))
                                 cursor.execute(
                                     "UPDATE flights SET available_seats = available_seats - 1 WHERE flight_id = %s",
@@ -272,7 +261,7 @@ elif choice == "👤 Passenger Management":
                     if conn:
                         try:
                             cursor = conn.cursor()
-                            query = "INSERT INTO passengers (full_name, passport_number, phone) VALUES (%s, %s, %s)"
+                            query = "INSERT INTO passengers_v2 (full_name, passport_number, phone) VALUES (%s, %s, %s)"
                             cursor.execute(query, (full_name, passport, phone))
                             conn.commit()
                             st.success(f"Passenger registered successfully! Assigned Passenger ID: **{cursor.lastrowid}**")
@@ -288,7 +277,7 @@ elif choice == "👤 Passenger Management":
         if conn:
             try:
                 cursor = conn.cursor(dictionary=True)
-                cursor.execute("SELECT passenger_id AS 'Passenger ID', full_name AS 'Full Name', passport_number AS 'Passport Number', phone AS 'Phone' FROM passengers")
+                cursor.execute("SELECT passenger_id AS 'Passenger ID', full_name AS 'Full Name', passport_number AS 'Passport Number', phone AS 'Phone' FROM passengers_v2")
                 passengers = cursor.fetchall()
                 conn.close()
                 if passengers:
@@ -308,8 +297,8 @@ elif choice == "📋 Booking Records & Analytics":
             cursor = conn.cursor(dictionary=True)
             query = """
                     SELECT b.booking_id AS 'Booking ID', p.full_name AS 'Passenger Name', p.passport_number AS 'Passport', f.flight_number AS 'Flight No', f.price AS 'Fare ($)', b.booking_date AS 'Booking Date', b.status AS 'Status'
-                    FROM bookings b
-                    JOIN passengers p ON b.passenger_id = p.passenger_id
+                    FROM bookings_v2 b
+                    JOIN passengers_v2 p ON b.passenger_id = p.passenger_id
                     JOIN flights f ON b.flight_id = f.flight_id
                     ORDER BY b.booking_id DESC
                     """
@@ -334,12 +323,12 @@ elif choice == "📋 Booking Records & Analytics":
                     if conn:
                         try:
                             cursor = conn.cursor()
-                            cursor.execute("SELECT flight_id, status FROM bookings WHERE booking_id = %s", (cancel_id,))
+                            cursor.execute("SELECT flight_id, status FROM bookings_v2 WHERE booking_id = %s", (cancel_id,))
                             record = cursor.fetchone()
                             if record:
                                 flight_id, status = record[0], record[1]
                                 if status != 'Cancelled':
-                                    cursor.execute("UPDATE bookings SET status = 'Cancelled' WHERE booking_id = %s", (cancel_id,))
+                                    cursor.execute("UPDATE bookings_v2 SET status = 'Cancelled' WHERE booking_id = %s", (cancel_id,))
                                     cursor.execute("UPDATE flights SET available_seats = available_seats + 1 WHERE flight_id = %s", (flight_id,))
                                     conn.commit()
                                     st.success("Booking cancelled and seat inventory updated!")
