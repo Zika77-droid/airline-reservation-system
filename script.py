@@ -15,16 +15,24 @@ st.set_page_config(
 # 2. Database Connection Helper
 def get_connection():
     try:
+        if "mysql" in st.secrets:
+        db_config = st.secrets["mysql"]
         conn = mysql.connector.connect(
-            host='localhost',
-            user='root',
-            password='',
-            database='airline_reservation_db'
+            host=db_config["host"],
+            port=int(db_config["port"]),
+            user=db_config["user"],
+            password=db_config["password"],
+            database=db_config["database"]
         )
-        return conn
-    except Error as e:
-        st.error(f"Database Connection Error: {e}")
-        return None
+    else:
+        conn = mysql.connector.connect(
+            host="localhost",
+            user="root",
+            password="",
+            database="airline_reservation_db"
+        )
+except Exception as e:
+    st.error(f"Database Connection Error: {e}")
 
 
 # Helper to fetch active airports for dropdowns
